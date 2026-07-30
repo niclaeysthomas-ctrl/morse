@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#0e1621"/>
+  <rect width="512" height="512" rx="110" fill="url(#g)" opacity=".18"/>
+  <defs>
+    <radialGradient id="g" cx="70%" cy="18%" r="80%">
+      <stop offset="0" stop-color="#4fd1c5"/><stop offset="1" stop-color="#0e1621"/>
+    </radialGradient>
+  </defs>
+  <!-- rythme morse "S" · · ·  et un trait -->
+  <g fill="#ffb454">
+    <circle cx="150" cy="150" r="20"/><circle cx="216" cy="150" r="20"/><circle cx="282" cy="150" r="20"/>
+    <rect x="336" y="136" width="70" height="28" rx="14"/>
+  </g>
+  <!-- phoque -->
+  <g transform="translate(146,196) scale(1.1)">
+    <path d="M100 40 C60 40 44 78 46 118 C48 156 72 176 100 176 C128 176 152 156 154 118 C156 78 140 40 100 40 Z" fill="#9aa7b4"/>
+    <ellipse cx="100" cy="130" rx="34" ry="44" fill="#cdd6de"/>
+    <path d="M52 120 C34 128 30 148 42 158 C50 150 56 138 60 128 Z" fill="#9aa7b4"/>
+    <path d="M148 120 C166 128 170 148 158 158 C150 150 144 138 140 128 Z" fill="#9aa7b4"/>
+    <circle cx="84" cy="80" r="8" fill="#25303a"/><circle cx="116" cy="80" r="8" fill="#25303a"/>
+    <ellipse cx="100" cy="94" rx="8" ry="6" fill="#3a2b2b"/>
+  </g>
+</svg>

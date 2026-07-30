@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0e1621">
+<title>Morse Phoque — apprendre le morse</title>
+<meta name="description" content="Apprends le code morse en français et en anglais : leçons progressives, clé morse, traducteur, référence complète. Avec des phoques et des binturongs.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="flashLayer"></div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" id="brandLogo"></span>
+      <div>
+        <h1 id="appName">Morse Phoque</h1>
+        <p id="tagline">Apprends le morse, un point à la fois</p>
+      </div>
+    </div>
+    <button class="iconbtn" id="langBtn" title="Language">🌐</button>
+    <button class="iconbtn" id="settingsBtn" title="Réglages">⚙️</button>
+  </header>
+
+  <div class="stats">
+    <span class="pill" id="statLevel"></span>
+    <span class="pill" id="statXp"></span>
+    <span class="pill" id="statStreak"></span>
+  </div>
+
+  <main id="view"></main>
+</div>
+
+<nav class="tabs" id="tabs"></nav>
+
+<div id="toast"></div>
+
+<script src="mascots.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
