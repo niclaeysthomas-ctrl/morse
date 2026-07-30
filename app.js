@@ -13,6 +13,12 @@ const DEFAULT_STATE = {
   lastActive: null,       // 'YYYY-MM-DD'
   correct: 0,             // total bonnes réponses
   keyChars: 0,            // caractères envoyés à la clé
+  charStats: {},          // { LETTRE: { seen, ok } }
+  dailyDone: null,        // 'YYYY-MM-DD' du dernier défi réussi
+  dailyCount: 0,          // nombre de défis quotidiens réussis
+  bestChrono: 0,          // record du mode chrono
+  jokesSeen: 0,           // blagues révélées (pour le badge)
+  drewBinturong: false,   // a terminé au moins un tuto de dessin
   badges: {},
   settings: { wpm: 12, tone: 600, sound: true, flash: true, vibrate: true },
 };
@@ -53,6 +59,11 @@ function touchStreak() {
 }
 function addXp(n) { S.xp += n; touchStreak(); checkBadges(); save(); renderStats(); }
 function bumpCorrect(n = 1) { S.correct += n; touchStreak(); checkBadges(); save(); }
+function recordChar(ch, ok) {
+  if (!ch || ch.length !== 1 || !MORSE[ch]) return;
+  const st = S.charStats[ch] || (S.charStats[ch] = { seen: 0, ok: 0 });
+  st.seen++; if (ok) st.ok++;
+}
 
 const BADGE_DEFS = [
   { id: 'first', icon: '🐾', test: () => S.lastLesson >= 1 },
@@ -60,6 +71,10 @@ const BADGE_DEFS = [
   { id: 'streak3', icon: '🔥', test: () => S.streak >= 3 },
   { id: '100', icon: '💯', test: () => S.correct >= 100 },
   { id: 'key', icon: '📡', test: () => S.keyChars >= 20 },
+  { id: 'joker', icon: '🤡', test: () => S.jokesSeen >= 10 },
+  { id: 'chrono', icon: '⚡', test: () => S.bestChrono >= 12 },
+  { id: 'daily', icon: '📅', test: () => S.dailyCount >= 3 },
+  { id: 'artist', icon: '🎨', test: () => S.drewBinturong },
 ];
 function checkBadges() {
   for (const b of BADGE_DEFS) {
@@ -206,20 +221,29 @@ const TABS = [
   { id: 'key', ico: '📻', view: viewKey },
   { id: 'translate', ico: '🔁', view: viewTranslate },
   { id: 'ref', ico: '📖', view: viewRef },
+  { id: 'draw', ico: '✏️', view: viewDraw },
+  { id: 'jokes', ico: '😹', view: viewJokes },
 ];
 let current = 'learn';
 function renderTabs() {
   const nav = $('#tabs'); nav.innerHTML = '';
+  let activeBtn = null;
   TABS.forEach(tab => {
     const b = el(`<button class="${tab.id === current ? 'active' : ''}"><span class="ico">${tab.ico}</span><span>${t('nav_' + tab.id)}</span></button>`);
     b.onclick = () => { AUDIO.stop(); current = tab.id; render(); };
+    if (tab.id === current) activeBtn = b;
     nav.appendChild(b);
+  });
+  // centre l'onglet actif si la barre défile
+  if (activeBtn) requestAnimationFrame(() => {
+    nav.scrollTo({ left: activeBtn.offsetLeft - nav.clientWidth / 2 + activeBtn.offsetWidth / 2, behavior: 'smooth' });
   });
 }
 function go(id) { AUDIO.stop(); current = id; render(); }
 function teardown() {
   // retire le pilotage clavier de la clé morse quand on quitte la vue
   if (keyHandler) { window.removeEventListener('keydown', keyHandler); window.removeEventListener('keyup', keyHandler); keyHandler = null; }
+  if (chronoCleanup) { chronoCleanup(); chronoCleanup = null; }
 }
 function render() {
   teardown();
@@ -232,17 +256,19 @@ function render() {
    VUE : APPRENDRE
    ============================================================ */
 function viewLearn(root) {
-  // bandeau mascottes
+  // bandeau mascottes (phoque, éléphant de mer & binturong)
   root.appendChild(el(`
     <div class="card">
       <div class="hero-mascots">
-        ${MASCOTS.seal({ size: 78 })}
+        ${MASCOTS.elephantSeal({ size: 84 })}
         <div class="speech">${t('mascotHi')}<br>${t('mascotBin')}</div>
-        ${MASCOTS.binturong({ size: 88 })}
+        ${MASCOTS.binturong({ size: 84 })}
       </div>
       <p class="sub center">${t('learnIntro')}</p>
       ${renderBadges()}
     </div>`));
+
+  renderDaily(root);
 
   root.appendChild(el(`<div class="section-title">${t('lessons')}</div>`));
   const grid = el(`<div class="lesson-grid"></div>`);
@@ -261,7 +287,66 @@ function viewLearn(root) {
     grid.appendChild(card);
   });
   root.appendChild(grid);
-  root.appendChild(el(`<div class="center muted" style="margin-top:14px">${MASCOTS.stamp('binturong', { size: 34 })}</div>`));
+
+  renderCharStats(root);
+
+  root.appendChild(el(`
+    <div class="center" style="margin-top:16px;display:flex;gap:14px;justify-content:center;align-items:flex-end">
+      ${MASCOTS.seal({ size: 56 })}${MASCOTS.elephantSeal({ size: 66 })}${MASCOTS.binturong({ size: 60 })}
+    </div>`));
+}
+
+/* ---- Défi du jour ----------------------------------------- */
+function dailyWord() {
+  const words = WORDS[S.lang];
+  const seed = [...todayStr()].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return words[seed % words.length];
+}
+function renderDaily(root) {
+  const done = S.dailyDone === todayStr();
+  const card = el(`
+    <div class="card" style="border-color:${done ? 'var(--good)' : 'var(--accent)'}">
+      <h2>🗓️ ${t('dailyTitle')}</h2>
+      <p class="sub">${done ? t('comeback') : t('dailyDesc')}</p>
+      ${done ? `<p class="pill" style="margin:auto;width:max-content">${t('dailyDoneMsg')}</p>` : `
+        <div class="row" style="justify-content:center;margin-bottom:10px"><button class="btn accent" id="dPlay">🔊 ${t('replay')}</button></div>
+        <input class="quiz-input" id="dIn" style="font-size:1.2rem" placeholder="${t('typeHere')}" autocomplete="off" autocapitalize="characters">
+        <div class="spacer"></div>
+        <button class="btn primary block" id="dCheck">${t('check')}</button>`}
+      <div class="watermark">${MASCOTS.stampES({ size: 92 })}</div>
+    </div>`);
+  root.appendChild(card);
+  if (done) return;
+  const word = dailyWord();
+  $('#dPlay', card).onclick = () => AUDIO.playText(word);
+  const submit = () => {
+    const v = normalize($('#dIn', card).value.trim()); if (!v) return;
+    if (v === word) {
+      S.dailyDone = todayStr(); S.dailyCount++; [...word].forEach(c => recordChar(c, true));
+      bumpCorrect(word.length); addXp(25); toast(t('dailyDoneMsg'), 'good'); render();
+    } else { toast(t('wrong'), 'bad'); }
+  };
+  $('#dCheck', card).onclick = submit;
+  $('#dIn', card).onkeydown = e => { if (e.key === 'Enter') submit(); };
+}
+
+/* ---- Statistiques par lettre (carte thermique) ------------ */
+function renderCharStats(root) {
+  const entries = Object.entries(S.charStats).filter(([, v]) => v.seen > 0);
+  root.appendChild(el(`<div class="section-title">${t('statsTitle')}</div>`));
+  if (!entries.length) { root.appendChild(el(`<p class="muted center">${t('statsEmpty')}</p>`)); return; }
+  root.appendChild(el(`<p class="sub center" style="margin-top:-4px">${t('statsSub')}</p>`));
+  const grid = el(`<div class="ref-grid" style="grid-template-columns:repeat(auto-fill,minmax(58px,1fr))"></div>`);
+  entries.sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(([ch, v]) => {
+    const r = v.ok / v.seen;                    // 0 → rouge, 1 → vert
+    const hue = Math.round(r * 130);            // 0=rouge, 130=vert
+    const cell = el(`<button class="ref-cell" style="padding:8px 4px;background:hsl(${hue} 45% 26%);border-color:hsl(${hue} 45% 40%)">
+      <span class="ch" style="font-size:1.1rem">${ch}</span>
+      <span class="muted" style="font-size:.62rem;color:#fff">${Math.round(r * 100)}%</span></button>`);
+    cell.onclick = () => AUDIO.playCode(MORSE[ch]);
+    grid.appendChild(cell);
+  });
+  root.appendChild(grid);
 }
 
 function renderBadges() {
@@ -331,6 +416,7 @@ function startLesson(lesson) {
     const submit = () => {
       const val = normalize(input.value.trim());
       if (!val) return;
+      recordChar(answer, val === answer);
       if (val === answer) {
         right++; bumpCorrect(); toast(t('correct') + ' 🎉', 'good'); addXp(8);
       } else {
@@ -373,7 +459,7 @@ function viewTrain(root) {
     <div class="card">
       <h2>${t('trainTitle')} 🎯</h2>
       <div class="row tight" id="trainTabs">
-        ${[['listen', t('trainListen')], ['words', t('trainWords')], ['send', t('trainSend')]]
+        ${[['listen', t('trainListen')], ['words', t('trainWords')], ['send', t('trainSend')], ['chrono', '⏱ ' + t('trainChrono')]]
           .map(([k, lbl]) => `<button class="btn ${trainMode === k ? 'accent' : 'ghost'}" data-m="${k}">${lbl}</button>`).join('')}
       </div>
     </div>`));
@@ -381,9 +467,81 @@ function viewTrain(root) {
   const host = el(`<div id="trainHost"></div>`); root.appendChild(host);
   if (trainMode === 'listen') trainListen(host);
   else if (trainMode === 'words') trainWords(host);
+  else if (trainMode === 'chrono') trainChrono(host);
   else trainSend(host);
-  root.appendChild(el(`<div class="center">${MASCOTS.sealPeek({ size: 80 })}</div>`));
+  root.appendChild(el(`<div class="center">${MASCOTS.elephantSeal({ size: 84 })}</div>`));
 }
+
+/* ---- Mode chrono : 60 s, un max de lettres ---------------- */
+function trainChrono(host) {
+  const pool = poolChars();
+  let answer, score = 0, timeLeft = 60, running = false, tick = null;
+  const card = el(`
+    <div class="card center">
+      <p class="sub">${t('chronoDesc')}</p>
+      <div class="row" style="justify-content:center;gap:18px">
+        <span class="pill">${t('timeLeft')} <b id="clock">60</b></span>
+        <span class="pill">${t('score')} <b id="csc">0</b></span>
+        <span class="pill">${t('best')} <b>${S.bestChrono}</b></span>
+      </div>
+      <div class="spacer"></div>
+      <div id="chronoBody"></div>
+    </div>`);
+  host.appendChild(card);
+  const body = $('#chronoBody', card), clock = $('#clock', card), csc = $('#csc', card);
+
+  const start = () => {
+    running = true; score = 0; timeLeft = 60; csc.textContent = '0'; clock.textContent = '60';
+    tick = setInterval(() => {
+      timeLeft--; clock.textContent = timeLeft;
+      if (timeLeft <= 0) end();
+    }, 1000);
+    round();
+  };
+  const round = () => {
+    answer = rand(pool);
+    body.innerHTML = '';
+    const q = el(`
+      <button class="btn accent" id="cReplay">🔊 ${t('replay')}</button>
+      <div class="spacer"></div>
+      <input class="quiz-input" id="cIn" maxlength="4" placeholder="?" autocomplete="off" autocapitalize="characters">`);
+    body.appendChild(q);
+    const input = $('#cIn', body); input.focus();
+    AUDIO.playCode(MORSE[answer]);
+    $('#cReplay', body).onclick = () => AUDIO.playCode(MORSE[answer]);
+    input.oninput = () => {
+      const v = normalize(input.value.trim());
+      if (!v) return;
+      if (v.length >= answer.length || v === answer) {
+        const ok = v === answer; recordChar(answer, ok);
+        if (ok) { score++; csc.textContent = score; bumpCorrect(); flashOk(); }
+        else { toast('→ ' + answer, 'bad'); }
+        round();
+      }
+    };
+  };
+  const flashOk = () => { csc.style.color = 'var(--good)'; setTimeout(() => csc.style.color = '', 180); };
+  const end = () => {
+    clearInterval(tick); running = false; AUDIO.stop();
+    const record = score > S.bestChrono; if (record) S.bestChrono = score;
+    addXp(score * 2); checkBadges(); save();
+    body.innerHTML = '';
+    body.appendChild(el(`
+      <div class="pop">
+        ${MASCOTS.seal({ size: 96 })}
+        <h2>${t('chronoOver')}</h2>
+        <p class="sub">${score} ${t('found')}${record ? ' · 🏆 ' + t('best') + ' !' : ''}</p>
+        <button class="btn primary block" id="cAgain">${t('chronoGo')}</button>
+      </div>`));
+    $('#cAgain', body).onclick = start;
+  };
+  body.appendChild(el(`<button class="btn primary block" id="cStart">${t('chronoGo')} ⏱</button>`));
+  $('#cStart', body).onclick = start;
+
+  // nettoyage du minuteur en quittant la vue
+  chronoCleanup = () => { if (tick) clearInterval(tick); };
+}
+let chronoCleanup = null;
 
 function trainListen(host) {
   const pool = poolChars();
@@ -412,7 +570,7 @@ function trainListen(host) {
   $('#reveal', card).onclick = () => toast(answer + '  ' + MORSE[answer]);
   const submit = () => {
     const v = normalize(input.value.trim()); if (!v) return;
-    tries++;
+    tries++; recordChar(answer, v === answer);
     if (v === answer) { hits++; streakLocal++; bumpCorrect(); addXp(5); toast(t('correct') + ' 🎉', 'good'); }
     else { streakLocal = 0; toast(t('wrong') + ' → ' + answer, 'bad'); }
     scoreLine(); setTimeout(next, 500);
@@ -449,7 +607,7 @@ function trainWords(host) {
   $('#reveal', card).onclick = () => toast(answer);
   const submit = () => {
     const v = normalize(input.value.trim()); if (!v) return;
-    tries++;
+    tries++; [...answer].forEach(c => recordChar(c, v === answer));
     if (v === answer) { hits++; bumpCorrect(answer.length); addXp(12); toast(t('correct') + ' 🎉', 'good'); }
     else { toast(t('wrong') + ' → ' + answer, 'bad'); }
     scoreLine(); setTimeout(next, 700);
@@ -488,7 +646,8 @@ function trainSend(host) {
   $('#hint', card).onclick = () => toast(target + '  ' + MORSE[target]);
   $('#send', card).onclick = () => {
     if (!buf) return;
-    if (buf === MORSE[target]) {
+    const ok = buf === MORSE[target]; recordChar(target, ok);
+    if (ok) {
       bumpCorrect(); addXp(6); toast(t('correct') + ' 🎉', 'good');
       target = rand(pool); tgt.textContent = target; buf = ''; show();
     } else { toast(t('wrong') + ' → ' + MORSE[target], 'bad'); buf = ''; show(); }
@@ -660,6 +819,134 @@ function viewRef(root) {
   };
   draw();
   $('#refSearch', root).oninput = (e) => draw(e.target.value);
+}
+
+/* ============================================================
+   VUE : DESSIN — apprendre à dessiner un binturong
+   ============================================================ */
+let drawLevel = 'facile', drawStep = 0, drawModel = false;
+function binturongSVG(toIndex, fromExclusive) {
+  const layers = BINTURONG_STROKES.slice(0, toIndex + 1).map((s, i) => {
+    const cur = i > fromExclusive;
+    return `<g class="drawlayer ${cur ? 'draw-pop' : ''}">${s}</g>`;
+  }).join('');
+  let ghost = '';
+  if (drawModel && toIndex < BINTURONG_STROKES.length - 1) {
+    ghost = `<g class="draw-ghost">${BINTURONG_STROKES.join('')}</g>`;
+  }
+  return `<svg viewBox="0 0 220 200" class="draw-svg" role="img" aria-label="Binturong">${ghost}${layers}</svg>`;
+}
+function viewDraw(root) {
+  const lvl = DRAW_LEVELS[drawLevel];
+  if (drawStep >= lvl.steps.length) drawStep = lvl.steps.length - 1;
+  if (drawStep < 0) drawStep = 0;
+  const steps = lvl.steps, step = steps[drawStep];
+  const prevTo = drawStep > 0 ? steps[drawStep - 1].to : -1;
+
+  root.appendChild(el(`
+    <div class="card">
+      <h2>${t('drawTitle')} ✏️</h2>
+      <p class="sub">${t('drawSub')}</p>
+      <div class="row tight" id="lvlRow">
+        ${Object.entries(DRAW_LEVELS).map(([k, v]) =>
+          `<button class="btn ${k === drawLevel ? 'accent' : 'ghost'}" data-l="${k}">${S.lang === 'fr' ? v.fr : v.en}</button>`).join('')}
+      </div>
+    </div>`));
+  $('#lvlRow', root).querySelectorAll('button').forEach(b => b.onclick = () => { drawLevel = b.dataset.l; drawStep = 0; render(); });
+
+  const card = el(`
+    <div class="card center">
+      <div class="draw-canvas">${binturongSVG(step.to, prevTo)}</div>
+      <div class="bar" style="margin:12px 0"><i style="width:${((drawStep + 1) / steps.length) * 100}%"></i></div>
+      <p class="muted" style="font-size:.78rem;letter-spacing:.1em">${t('drawStep')} ${drawStep + 1} / ${steps.length}</p>
+      <p style="font-size:1.02rem;min-height:60px;margin:6px 4px">${S.lang === 'fr' ? step.fr : step.en}</p>
+      <label class="setting" style="justify-content:center;border:none;padding:4px">
+        <span class="switch"><input type="checkbox" id="modelChk" ${drawModel ? 'checked' : ''}><span class="track"></span></span>
+        <span class="muted" style="flex:0;margin-left:8px">${t('drawModel')}</span>
+      </label>
+      <div class="row">
+        <button class="btn ghost block" id="dPrev" ${drawStep === 0 ? 'disabled' : ''}>← ${t('drawPrev')}</button>
+        ${drawStep < steps.length - 1
+          ? `<button class="btn primary block" id="dNext">${t('drawNext')} →</button>`
+          : `<button class="btn primary block" id="dRestart">${t('drawRestart')}</button>`}
+      </div>
+    </div>`);
+  root.appendChild(card);
+
+  $('#modelChk', card).onchange = (e) => { drawModel = e.target.checked; render(); };
+  const prevBtn = $('#dPrev', card); if (prevBtn) prevBtn.onclick = () => { drawStep--; render(); };
+  const nextBtn = $('#dNext', card);
+  if (nextBtn) nextBtn.onclick = () => {
+    drawStep++;
+    if (drawStep === steps.length - 1 && !S.drewBinturong) { S.drewBinturong = true; addXp(20); toast('🎨 ' + t('badge_artist'), 'good'); }
+    render();
+  };
+  const restart = $('#dRestart', card);
+  if (restart) restart.onclick = () => { drawStep = 0; render(); };
+
+  if (drawStep === steps.length - 1) {
+    root.appendChild(el(`<p class="center" style="color:var(--good);font-weight:600">${t('drawDone')}</p>`));
+  }
+  root.appendChild(el(`<div class="center" style="margin-top:6px">${MASCOTS.binturong({ size: 70 })}</div>`));
+}
+
+/* ============================================================
+   VUE : BLAGUES (aucun rapport avec le morse — c'est le but)
+   ============================================================ */
+let jokeIdx = -1;
+function viewJokes(root) {
+  const list = JOKES[S.lang];
+  const pickNew = () => { let i; do { i = Math.floor(Math.random() * list.length); } while (i === jokeIdx && list.length > 1); jokeIdx = i; };
+  if (jokeIdx < 0 || jokeIdx >= list.length) pickNew();
+
+  root.appendChild(el(`
+    <div class="card">
+      <h2>${t('jokeTitle')} 🥁🦭</h2>
+      <p class="sub">${t('jokeSub')}</p>
+      <p class="muted" style="font-size:.72rem">${t('jokeWarn')}</p>
+    </div>`));
+
+  const stage = el(`<div id="jokeStage"></div>`);
+  root.appendChild(stage);
+
+  const drumroll = () => { // petit "ba-dum-tss" en morse pour le fun (T = trait)
+    if (S.settings.sound) AUDIO.playText('T T');
+  };
+
+  const drawJoke = () => {
+    const j = list[jokeIdx];
+    stage.innerHTML = '';
+    const groan = 6 + Math.floor(Math.random() * 5); // note de nullité /10
+    const card = el(`
+      <div class="card center pop">
+        <div style="display:flex;justify-content:center;gap:10px;align-items:flex-end;margin-bottom:6px">
+          ${MASCOTS.elephantSeal({ size: 70 })}${MASCOTS.binturong({ size: 64 })}
+        </div>
+        <p style="font-size:1.15rem;font-weight:600;margin:6px 4px">${j.q}</p>
+        <div id="punch" class="muted" style="min-height:26px;font-size:1.05rem;margin:6px 4px"></div>
+        <div id="groan" class="hidden">
+          <div class="section-title" style="justify-content:center">${t('jokeGroan')} : ${groan}/10</div>
+        </div>
+        <div class="row">
+          <button class="btn primary block" id="reveal">${t('jokeReveal')}</button>
+          <button class="btn ghost block" id="next">🔀 ${t('jokeNext')}</button>
+        </div>
+        <div class="watermark">${MASCOTS.stampES({ size: 96 })}</div>
+      </div>`);
+    stage.appendChild(card);
+    let revealed = false;
+    $('#reveal', card).onclick = () => {
+      if (!revealed) {
+        revealed = true; drumroll();
+        $('#punch', card).textContent = list[jokeIdx].a;
+        $('#groan', card).classList.remove('hidden');
+        $('#reveal', card).textContent = '😹';
+        S.jokesSeen++; checkBadges(); save();
+      }
+    };
+    $('#next', card).onclick = () => { AUDIO.stop(); pickNew(); drawJoke(); };
+  };
+  drawJoke();
 }
 
 /* ============================================================

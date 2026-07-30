@@ -19,7 +19,14 @@ _(lien actif une fois GitHub Pages activé — voir plus bas)_
 | 📻 | **Clé morse** | Une vraie clé : barre espace ou gros bouton — appui court = point, appui long = trait, décodage en temps réel. |
 | 🔁 | **Traducteur** | Texte ↔ morse dans les deux sens, avec lecture sonore, **flash lumineux** et vibration. |
 | 📖 | **Référence** | Alphabet, chiffres, ponctuation, **lettres accentuées françaises**, signaux de service (SOS, AR, CQ…). |
-| 🏅 | **Progression** | XP, niveaux, série de jours, badges. |
+| ✏️ | **Dessin** | Apprendre à **dessiner un binturong** pas-à-pas, en 3 niveaux (facile / moyen / expert), avec calque « modèle ». |
+| 😹 | **Blagues** | Un onglet de **blagues vraiment nulles** (sans aucun rapport avec le morse, c'est le but). |
+| ⏱️ | **Chrono** | Mode contre-la-montre : 60 s pour décoder un max de lettres, avec record. |
+| 🗓️ | **Défi du jour** | Un mot mystère quotidien à décoder pour un bonus d'XP. |
+| 📊 | **Stats par lettre** | Carte thermique de tes lettres : plus c'est vert, mieux tu la reconnais. |
+| 🏅 | **Progression** | XP, niveaux, série de jours, 9 badges. |
+
+Et bien sûr : des **phoques**, des **éléphants de mer** 🦭 et des **binturongs** 🐾 dessinés à la main, un peu partout.
 
 Réglages : vitesse (5–30 MPM), fréquence du son (300–1000 Hz), son / flash / vibration,
 et bascule **🇫🇷 / 🇬🇧** à tout moment.

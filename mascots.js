@@ -105,4 +105,44 @@ function stamp(kind, opts = {}) {
   </svg>`;
 }
 
-const MASCOTS = { seal, sealPeek, binturong, stamp };
+/* ---- ÉLÉPHANT DE MER — avec son gros nez tombant ---------- */
+function elephantSeal(opts = {}) {
+  const s = opts.size || 130;
+  const body = opts.body || '#8a94a6';
+  const belly = opts.belly || '#b9c2d0';
+  const nose = opts.nose || '#79818f';
+  return `
+  <svg viewBox="0 0 220 210" width="${s}" height="${s * 0.95}" class="mascot mascot-eseal" role="img" aria-label="Éléphant de mer">
+    <ellipse cx="110" cy="196" rx="80" ry="12" fill="rgba(0,0,0,.12)"/>
+    <!-- corps massif -->
+    <path d="M46 158 C34 96 74 50 120 50 C180 50 200 104 192 150 C188 178 150 190 110 190 C72 190 52 180 46 158 Z" fill="${body}"/>
+    <ellipse cx="122" cy="150" rx="52" ry="38" fill="${belly}"/>
+    <path d="M72 176 C62 192 88 198 96 186 Z" fill="${body}"/>
+    <path d="M156 176 C166 192 140 198 132 186 Z" fill="${body}"/>
+    <!-- tête -->
+    <circle cx="98" cy="92" r="50" fill="${body}"/>
+    <!-- yeux -->
+    <circle cx="80" cy="80" r="7" fill="#25303a"/><circle cx="116" cy="80" r="7" fill="#25303a"/>
+    <circle cx="82" cy="78" r="2.3" fill="#fff"/><circle cx="118" cy="78" r="2.3" fill="#fff"/>
+    <!-- proboscis : le fameux gros nez pendant -->
+    <path d="M84 92 C78 96 78 122 90 134 C96 140 102 140 108 134 C120 122 120 96 114 92 C108 88 90 88 84 92 Z" fill="${nose}"/>
+    <ellipse cx="99" cy="130" rx="12" ry="8" fill="#5c6472"/>
+    <circle cx="93" cy="130" r="2.6" fill="#20262f"/><circle cx="105" cy="130" r="2.6" fill="#20262f"/>
+    <!-- moustaches -->
+    <g stroke="#5c6472" stroke-width="1.6" stroke-linecap="round" opacity=".82">
+      <line x1="86" y1="126" x2="58" y2="124"/><line x1="86" y1="130" x2="60" y2="136"/>
+      <line x1="112" y1="126" x2="140" y2="124"/><line x1="112" y1="130" x2="138" y2="136"/>
+    </g>
+  </svg>`;
+}
+
+/* ---- Tampon éléphant de mer (silhouette) ------------------ */
+function stampES(opts = {}) {
+  const s = opts.size || 40, c = opts.color || 'currentColor';
+  return `<svg viewBox="0 0 220 210" width="${s}" height="${s}" class="mascot-stamp" aria-hidden="true">
+    <path d="M46 158 C34 96 74 50 120 50 C180 50 200 104 192 150 C188 178 150 190 110 190 C72 190 52 180 46 158 Z" fill="${c}"/>
+    <path d="M84 92 C78 96 78 130 90 140 C96 146 102 146 108 140 C120 130 120 96 114 92 Z" fill="${c}"/>
+  </svg>`;
+}
+
+const MASCOTS = { seal, sealPeek, binturong, elephantSeal, stamp, stampES };

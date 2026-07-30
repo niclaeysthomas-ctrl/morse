@@ -1,8 +1,8 @@
 /* Service worker — cache local pour un usage hors-ligne */
-const CACHE = 'morse-phoque-v1';
+const CACHE = 'morse-phoque-v2';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './data.js',
-  './mascots.js', './manifest.webmanifest', './icon.svg',
+  './mascots.js', './draw.js', './manifest.webmanifest', './icon.svg',
 ];
 
 self.addEventListener('install', (e) => {
