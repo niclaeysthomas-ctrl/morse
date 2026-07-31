@@ -171,10 +171,6 @@ textarea { resize: vertical; min-height: 84px; }
 .key-live { min-height: 40px; text-align: center; font-size: 1.6rem; letter-spacing: .12em; color: var(--accent); }
 .key-out { min-height: 30px; text-align: center; font-size: 1.5rem; letter-spacing: .18em; word-break: break-word; }
 
-/* ---- Flash lumineux plein écran --------------------------- */
-#flashLayer { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 60; transition: opacity .04s; }
-#flashLayer.on { opacity: .9; }
-
 /* ---- Toast ------------------------------------------------ */
 #toast {
   position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(20px);

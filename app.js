@@ -20,7 +20,7 @@ const DEFAULT_STATE = {
   jokesSeen: 0,           // blagues révélées (pour le badge)
   drewBinturong: false,   // a terminé au moins un tuto de dessin
   badges: {},
-  settings: { wpm: 12, tone: 600, sound: true, flash: true, vibrate: true },
+  settings: { wpm: 12, tone: 600, sound: true, vibrate: true },
 };
 let S = loadState();
 
@@ -146,7 +146,6 @@ class MorseAudio {
         g.gain.setValueAtTime(vol, tt + it.ms / 1000 - 0.006);
         g.gain.linearRampToValueAtTime(0.0001, tt + it.ms / 1000);
         const delay = (tt - t0) * 1000;
-        if (S.settings.flash) { this._timers.push(setTimeout(() => flash(true), delay)); this._timers.push(setTimeout(() => flash(false), delay + it.ms)); }
         if (onSym) this._timers.push(setTimeout(() => onSym(cursor), delay));
         vib.push(Math.round(it.ms));
       } else {
@@ -163,7 +162,7 @@ class MorseAudio {
   stop() {
     this._timers.forEach(clearTimeout); this._timers = [];
     if (this._osc) { try { this._osc.stop(); } catch {} this._osc = null; }
-    flash(false); this.playing = false;
+    this.playing = false;
     if (navigator.vibrate) navigator.vibrate(0);
   }
 
@@ -176,7 +175,6 @@ class MorseAudio {
     g.gain.value = 0.0001; osc.connect(g); g.connect(this.master);
     g.gain.linearRampToValueAtTime(this.vol(), this.ctx.currentTime + 0.006);
     osc.start(); this._live = { osc, g };
-    if (S.settings.flash) flash(true);
     if (S.settings.vibrate && navigator.vibrate) navigator.vibrate(30);
   }
   stopTone() {
@@ -185,14 +183,12 @@ class MorseAudio {
     g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now);
     g.gain.linearRampToValueAtTime(0.0001, now + 0.01);
     try { osc.stop(now + 0.03); } catch {}
-    this._live = null; if (S.settings.flash) flash(false);
+    this._live = null;
   }
 }
 const AUDIO = new MorseAudio();
 
-/* ---------- Flash & toast ---------------------------------- */
-let flashLayer;
-function flash(on) { if (!flashLayer) flashLayer = $('#flashLayer'); flashLayer.classList.toggle('on', !!on); }
+/* ---------- Toast ------------------------------------------ */
 let toastTimer;
 function toast(msg, kind = '') {
   const box = $('#toast'); box.textContent = msg; box.className = 'show ' + kind;
@@ -564,8 +560,7 @@ function trainListen(host) {
   const scoreLine = () => sc.textContent = `${t('score')} : ${hits}/${tries} · ${t('accuracy')} : ${tries ? Math.round(hits / tries * 100) : 0}%`;
   scoreLine();
   const play = () => AUDIO.playCode(MORSE[answer]);
-  const next = () => { answer = rand(pool); input.value = ''; input.focus(); play(); };
-  play();
+  const next = () => { answer = rand(pool); input.value = ''; input.focus(); };
   $('#play', card).onclick = play;
   $('#reveal', card).onclick = () => toast(answer + '  ' + MORSE[answer]);
   const submit = () => {
@@ -601,8 +596,7 @@ function trainWords(host) {
   const scoreLine = () => sc.textContent = `${t('score')} : ${hits}/${tries}`;
   scoreLine();
   const play = () => AUDIO.playText(answer);
-  const next = () => { answer = rand(words); input.value = ''; input.focus(); play(); };
-  play();
+  const next = () => { answer = rand(words); input.value = ''; input.focus(); };
   $('#play', card).onclick = play;
   $('#reveal', card).onclick = () => toast(answer);
   const submit = () => {
@@ -961,7 +955,6 @@ function openSettings() {
       <div class="setting"><label>${t('tone')}</label><b id="tonev">${S.settings.tone}</b></div>
       <input type="range" min="300" max="1000" step="10" value="${S.settings.tone}" id="tone">
       ${toggle('sound', t('sound'))}
-      ${toggle('flash', t('lightFlash'))}
       ${toggle('vibrate', t('vibrate'))}
       <div class="spacer"></div>
       <button class="btn ghost block" id="testBeep">🔊 SOS</button>

@@ -1,5 +1,5 @@
 /* Service worker — cache local pour un usage hors-ligne */
-const CACHE = 'morse-phoque-v2';
+const CACHE = 'morse-phoque-v3';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './data.js',
   './mascots.js', './draw.js', './manifest.webmanifest', './icon.svg',
