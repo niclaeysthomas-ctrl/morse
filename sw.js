@@ -1,5 +1,5 @@
 /* Service worker — cache local pour un usage hors-ligne */
-const CACHE = 'morse-phoque-v3';
+const CACHE = 'morse-phoque-v4';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './data.js',
   './mascots.js', './draw.js', './manifest.webmanifest', './icon.svg',
@@ -22,7 +22,7 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((cached) =>
       cached || fetch(e.request).then((res) => {
         const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        if (res.ok) caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
         return res;
       }).catch(() => caches.match('./index.html'))
     )
